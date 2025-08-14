@@ -5,6 +5,7 @@ import fetch from "node-fetch";
 const rootDir = path.join(process.cwd());
 const packagesDir = path.join(rootDir, "packages", "@resonix");
 const metaPackageDir = path.join(packagesDir, "node");
+const clientPackageDir = path.join(rootDir, "packages", "resonix");
 const apiUrl =
   "https://api.github.com/repos/resonix-dev/resonix-node/releases/latest";
 
@@ -76,6 +77,12 @@ async function main() {
   metaPkg.version = latest;
   writeJson(metaPkgPath, metaPkg);
   console.log("[update] meta package versions updated");
+
+  const clientPkgPath = path.join(clientPackageDir, "package.json");
+  const clientPkg = readJson(clientPkgPath);
+  clientPkg.version = latest;
+  writeJson(clientPkgPath, clientPkg);
+  console.log("[update] client package version updated");
 
   return { changed: true, latest };
 }

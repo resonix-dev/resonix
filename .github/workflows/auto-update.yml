@@ -26,7 +26,6 @@ jobs:
         with:
           node-version: 20
           registry-url: "https://registry.npmjs.org"
-          cache: "pnpm"
 
       - name: Setup PNPM
         uses: pnpm/action-setup@v4
@@ -96,6 +95,11 @@ jobs:
             echo "Publishing meta package @resonix/node"
             (cd packages/@resonix/node && npm publish --access public --provenance || echo "Failed to publish meta package")
           fi
+          # Finally publish the official client package (must be last overall)
+          if [ -f packages/resonix/package.json ]; then
+            echo "Publishing client package resonix"
+            (cd packages/resonix && npm publish --access public --provenance || echo "Failed to publish resonix client package")
+          fi
 
       - name: Push changes
         if: steps.cmp.outputs.needs_update == 'true'
@@ -109,7 +113,8 @@ jobs:
         run: |
           set -e
           echo "Creating releases for all @resonix packages"
-          for pkgjson in packages/@resonix/*/package.json; do
+          # Include both scoped @resonix packages and the standalone client package
+          for pkgjson in packages/@resonix/*/package.json packages/resonix/package.json; do
             [ -f "$pkgjson" ] || continue
             name=$(jq -r .name "$pkgjson")
             version=$(jq -r .version "$pkgjson")
