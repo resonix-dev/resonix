@@ -42,6 +42,9 @@ importers:
       node-fetch:
         specifier: ^3.3.2
         version: 3.3.2
+      resonix:
+        specifier: workspace:*
+        version: link:../packages/resonix
       ws:
         specifier: ^8.18.0
         version: 8.18.3
@@ -56,7 +59,29 @@ importers:
 
   packages/@resonix/macos-x86_64: {}
 
-  packages/@resonix/node: {}
+  packages/@resonix/node:
+    optionalDependencies:
+      '@resonix/linux-aarch64':
+        specifier: workspace:*
+        version: link:../linux-aarch64
+      '@resonix/linux-armv7':
+        specifier: workspace:*
+        version: link:../linux-armv7
+      '@resonix/linux-x86_64':
+        specifier: workspace:*
+        version: link:../linux-x86_64
+      '@resonix/macos-aarch64':
+        specifier: workspace:*
+        version: link:../macos-aarch64
+      '@resonix/macos-x86_64':
+        specifier: workspace:*
+        version: link:../macos-x86_64
+      '@resonix/windows-aarch64':
+        specifier: workspace:*
+        version: link:../windows-aarch64
+      '@resonix/windows-x86_64':
+        specifier: workspace:*
+        version: link:../windows-x86_64
 
   packages/@resonix/windows-aarch64: {}
 
