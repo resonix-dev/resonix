@@ -1,34 +1,46 @@
 {
-  "name": "resonix.js",
-  "version": "0.1.0",
-  "description": "Official JavaScript client for the Resonix audio node",
+  "name": "resonix-monorepo",
+  "version": "0.2.5",
+  "description": "Monorepo for Resonix JS packages and examples",
+  "license": "BSD-3-Clause",
+  "author": "Resonix OSS Team",
   "type": "module",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "files": [
-    "dist",
-    "LICENSE",
-    "README.md"
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/resonix-dev/resonix.git"
+  },
+  "homepage": "https://resonix.dev",
+  "bugs": {
+    "url": "https://github.com/resonix-dev/resonix/issues"
+  },
+  "workspaces": [
+    "packages/*",
+    "packages/@resonix/*",
+    "example"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "prepublishOnly": "pnpm run build",
-    "format": "prettier --write ."
+    "build": "cd packages/resonix && pnpm build",
+    "build:watch": "cd packages/resonix && pnpm build -- --watch",
+    "format": "prettier --write .",
+    "lint": "echo 'No linter configured'",
+    "clean": "rimraf **/dist",
+    "dev": "cd packages/resonix && pnpm build -- --watch",
+    "download": "node helpers/download.js",
+    "update:versions": "node helpers/updateVersions.js",
+    "example": "pnpm --filter resonix-discord-bot start",
+    "release": "echo 'Use changesets or manual versioning (not yet configured)'"
+  },
+  "devDependencies": {
+    "prettier": "^3.6.2",
+    "rimraf": "^6.0.1",
+    "typescript": "^5.9.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   },
   "dependencies": {
-    "@discordjs/opus": "^0.10.0",
-    "@discordjs/voice": "^0.18.0",
-    "discord.js": "^14.15.0",
+    "extract-zip": "^2.0.1",
     "node-fetch": "^3.3.2",
-    "node-opus": "^0.3.3",
-    "opusscript": "^0.1.1",
-    "ws": "^8.17.0"
-  },
-  "license": "BSD-3-Clause",
-  "devDependencies": {
-    "@types/node": "^24.2.1",
-    "@types/ws": "^8.18.1",
-    "prettier": "^3.6.2",
-    "typescript": "^5.9.2"
+    "tar": "^7.4.3"
   }
 }

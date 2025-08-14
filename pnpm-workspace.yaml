@@ -1,0 +1,9 @@
+packages:
+  - packages/*
+  - packages/@resonix/*
+  - example
+
+onlyBuiltDependencies:
+  - "@discordjs/opus"
+  - node-opus
+  - ref

@@ -1,53 +1,27 @@
-# resonix.js (Unofficial)
+# Resonix
 
-Simple opinionated JavaScript/TypeScript client for a Resonix audio node.
+Multi-platform prebuilt binaries and Node.js wrapper for the Resonix audio node.
 
-Focus: minimal surface (join, play, pause, resume, volume) and raw PCM streaming over the builtin Resonix websocket just like the reference example.
+## Packages
 
-## Install
+This monorepo contains:
 
-```bash
-npm i resonix.js
-# or
-pnpm i resonix.js
-# or
-yarn add resonix.js
-# or
-bun add resonix.js
-```
+- `resonix` - TypeScript/JS API
+- Platform-specific binary packages (`@resonix/linux-x86_64`, etc.)
+- `@resonix/node` - Node.js launcher / CLI shim
 
-## Quick start
+## Contributing
 
-```ts
-import { Client, GatewayIntentBits } from "discord.js";
-import { ResonixNode, ResonixManager } from "resonix.js";
+See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
-const client = new Client({
-  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates],
-});
+## Code of Conduct
 
-const node = new ResonixNode({
-  baseUrl: "http://localhost:2333",
-  version: "v0",
-});
-const manager = new ResonixManager(client, node);
+See [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
 
-// on interaction => join + play
-```
+## Security
 
-See `examples/discord-js-bot` in the main repository for an integration usage pattern.
+See [SECURITY.md](SECURITY.md) for our security policy and how to report vulnerabilities.
 
-## Design Notes
+## License
 
-- One player per guild (id = `g<guildId>`)
-- Resonix handles decoding and pacing; we pipe 20ms raw PCM frames straight into an `AudioResource` (StreamType.Raw, S16LE stereo 48k)
-- No track queue abstraction included yet (keep it light). You can layer your own queue before calling `player.play(uri)`.
-
-## Roadmap
-
-- Events (track start/end/error) if/when exposed by Resonix
-- Automatic voice state tracking (move / disconnect)
-- Retry & reconnection logic for WS
-- Built-in queue & search helpers
-
-PRs welcome.
+BSD-3-Clause (see [LICENSE](LICENSE)).

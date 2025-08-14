@@ -99,7 +99,9 @@ export class ResonixPlayer {
     this.audioPlayer.play(resource);
     if (this.opts.debug) {
       this.audioPlayer.on("debug", (m) => console.log("[resonix] ap debug", m));
-      this.audioPlayer.on("error", (e) => console.error("[resonix] ap error", e));
+      this.audioPlayer.on("error", (e) =>
+        console.error("[resonix] ap error", e),
+      );
     }
 
     let pkt = 0;
@@ -113,12 +115,12 @@ export class ResonixPlayer {
         let energy = 0;
         if (buf.length >= 4) {
           // compute average absolute sample value over first 50 samples for quick sanity
-            const sampleCount = Math.min(50, buf.length / 2);
-            for (let i = 0; i < sampleCount; i++) {
-              const sample = buf.readInt16LE(i * 2);
-              energy += Math.abs(sample);
-            }
-            energy = Math.round(energy / sampleCount);
+          const sampleCount = Math.min(50, buf.length / 2);
+          for (let i = 0; i < sampleCount; i++) {
+            const sample = buf.readInt16LE(i * 2);
+            energy += Math.abs(sample);
+          }
+          energy = Math.round(energy / sampleCount);
         }
         console.log(
           `[resonix] frame ${pkt + 1} ${buf.length} bytes` +

@@ -1,0 +1,46 @@
+{
+  "name": "@resonix/node",
+  "version": "0.2.5",
+  "private": false,
+  "description": "Meta package that installs the platform-specific Resonix node binary and exposes the 'resonix' CLI.",
+  "license": "BSD-3-Clause",
+  "author": "Resonix OSS Team",
+  "bin": {
+    "resonix": "bin/resonix.js"
+  },
+  "files": [
+    "LICENSE",
+    "postinstall.cjs",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/resonix-dev/resonix.git"
+  },
+  "homepage": "https://resonix.dev",
+  "bugs": {
+    "url": "https://github.com/resonix-dev/resonix/issues"
+  },
+  "optionalDependencies": {
+    "@resonix/linux-x86_64": "0.2.5",
+    "@resonix/linux-aarch64": "0.2.5",
+    "@resonix/linux-armv7": "0.2.5",
+    "@resonix/macos-x86_64": "0.2.5",
+    "@resonix/macos-aarch64": "0.2.5",
+    "@resonix/windows-x86_64": "0.2.5",
+    "@resonix/windows-aarch64": "0.2.5"
+  },
+  "scripts": {
+    "postinstall": "node postinstall.cjs"
+  },
+  "keywords": [
+    "resonix",
+    "audio",
+    "native",
+    "binary",
+    "cross-platform"
+  ]
+}

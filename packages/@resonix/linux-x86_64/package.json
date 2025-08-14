@@ -1,0 +1,35 @@
+{
+  "name": "@resonix/linux-x86_64",
+  "version": "0.2.5",
+  "private": false,
+  "description": "Platform specific binary package for Resonix (linux x86_64)",
+  "license": "BSD-3-Clause",
+  "os": [
+    "linux"
+  ],
+  "cpu": [
+    "x64"
+  ],
+  "files": [
+    "bin/",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/resonix-dev/resonix.git"
+  },
+  "homepage": "https://resonix.dev",
+  "bugs": {
+    "url": "https://github.com/resonix-dev/resonix/issues"
+  },
+  "keywords": [
+    "resonix",
+    "audio",
+    "native",
+    "linux",
+    "x86_64"
+  ]
+}

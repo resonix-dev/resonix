@@ -146,8 +146,7 @@ client.on("interactionCreate", async (itx) => {
     case "volume": {
       const v = itx.options.getNumber("value", true);
       const p = manager.get(gid);
-      if (!p)
-        return void itx.editReply({ content: "No player.", flags: 64 });
+      if (!p) return void itx.editReply({ content: "No player.", flags: 64 });
       await p.setVolume(v).catch(() => {});
       return void itx.editReply({ content: `Volume -> ${v}`, flags: 64 });
     }

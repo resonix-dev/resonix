@@ -1,0 +1,144 @@
+name: Auto Update Resonix Node
+
+on:
+  schedule:
+    - cron: "0 0 * * *"
+  workflow_dispatch: {}
+  push:
+    paths:
+      - ".github/workflows/auto-update.yml"
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: "https://registry.npmjs.org"
+          cache: "pnpm"
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+          run_install: true
+
+      - name: Get latest version tag
+        id: latest
+        run: |
+          echo "LATEST_TAG=$(curl -s https://api.github.com/repos/resonix-dev/resonix-node/releases/latest | jq -r .tag_name | sed 's/^v//')" >> $GITHUB_OUTPUT
+
+      - name: Current repo version
+        id: current
+        run: |
+          echo "CURRENT_VERSION=$(jq -r .version package.json | sed 's/^v//')" >> $GITHUB_OUTPUT
+
+      - name: Compare versions
+        id: cmp
+        run: |
+          if [ "${{ steps.latest.outputs.LATEST_TAG }}" = "${{ steps.current.outputs.CURRENT_VERSION }}" ]; then
+            echo "needs_update=false" >> $GITHUB_OUTPUT
+          else
+            echo "needs_update=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Stop if up to date
+        if: steps.cmp.outputs.needs_update == 'false'
+        run: echo "Already up to date. Skipping." && exit 0
+
+      - name: Update versions
+        if: steps.cmp.outputs.needs_update == 'true'
+        run: pnpm run update:versions
+
+      - name: Download latest binaries
+        if: steps.cmp.outputs.needs_update == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: pnpm run download
+
+      - name: Commit changes
+        if: steps.cmp.outputs.needs_update == 'true'
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .
+          git diff --cached --quiet || git commit -m "chore: auto-update resonix-node to v${{ steps.latest.outputs.LATEST_TAG }}"
+
+      - name: Publish packages
+        if: steps.cmp.outputs.needs_update == 'true'
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          # Publish arch packages first (avoid meta depending on not-yet-published versions)
+          for d in packages/@resonix/*; do
+            base="$(basename "$d")"
+            if [ "$base" = "node" ]; then
+              continue
+            fi
+            if [ -f "$d/package.json" ]; then
+              echo "Publishing $d"
+              (cd "$d" && npm publish --access public --provenance || echo "Failed to publish $d")
+            fi
+          done
+          # Now publish meta package last
+          if [ -f packages/@resonix/node/package.json ]; then
+            echo "Publishing meta package @resonix/node"
+            (cd packages/@resonix/node && npm publish --access public --provenance || echo "Failed to publish meta package")
+          fi
+
+      - name: Push changes
+        if: steps.cmp.outputs.needs_update == 'true'
+        run: |
+          git push origin HEAD:main
+
+      - name: Create GitHub releases
+        if: steps.cmp.outputs.needs_update == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          echo "Creating releases for all @resonix packages"
+          for pkgjson in packages/@resonix/*/package.json; do
+            [ -f "$pkgjson" ] || continue
+            name=$(jq -r .name "$pkgjson")
+            version=$(jq -r .version "$pkgjson")
+            tag="${name}-v${version}"            # tag (no spaces)
+            relname="${name} v${version}"        # release name as requested
+            # Check if release already exists
+            code=$(curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/${GITHUB_REPOSITORY}/releases/tags/${tag}")
+            if [ "$code" = "200" ]; then
+              echo "Release for $relname already exists. Skipping."
+              continue
+            fi
+            echo "Creating release $relname (tag: $tag)"
+            payload=$(jq -n \
+              --arg tag "$tag" \
+              --arg relname "$relname" \
+              --arg name "$name" \
+              --arg version "$version" \
+              '{
+                tag_name: $tag,
+                target_commitish: "main",
+                name: $relname,
+                body: ("Automated release for " + $name + " version " + $version + "."),
+                draft: false,
+                prerelease: false,
+                generate_release_notes: true
+              }')
+            curl -s -X POST \
+              -H "Authorization: Bearer $GITHUB_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/releases" \
+              -d "$payload"
+          done
