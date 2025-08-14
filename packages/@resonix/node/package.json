@@ -1,6 +1,6 @@
 {
   "name": "@resonix/node",
-  "version": "0.1.0",
+  "version": "0.2.5",
   "private": false,
   "description": "Meta package that installs the platform-specific Resonix node binary and exposes the 'resonix' CLI.",
   "license": "BSD-3-Clause",
@@ -25,13 +25,13 @@
     "url": "https://github.com/resonix-dev/resonix/issues"
   },
   "optionalDependencies": {
-    "@resonix/linux-x86_64": "workspace:*",
-    "@resonix/linux-aarch64": "workspace:*",
-    "@resonix/linux-armv7": "workspace:*",
-    "@resonix/macos-x86_64": "workspace:*",
-    "@resonix/macos-aarch64": "workspace:*",
-    "@resonix/windows-x86_64": "workspace:*",
-    "@resonix/windows-aarch64": "workspace:*"
+    "@resonix/linux-x86_64": "0.2.5",
+    "@resonix/linux-aarch64": "0.2.5",
+    "@resonix/linux-armv7": "0.2.5",
+    "@resonix/macos-x86_64": "0.2.5",
+    "@resonix/macos-aarch64": "0.2.5",
+    "@resonix/windows-x86_64": "0.2.5",
+    "@resonix/windows-aarch64": "0.2.5"
   },
   "scripts": {
     "postinstall": "node postinstall.cjs"

@@ -1,6 +1,6 @@
 {
   "name": "@resonix/windows-aarch64",
-  "version": "0.1.0",
+  "version": "0.2.5",
   "private": false,
   "description": "Platform specific binary package for Resonix (Windows aarch64)",
   "license": "BSD-3-Clause",
