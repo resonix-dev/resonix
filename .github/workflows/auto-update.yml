@@ -107,7 +107,7 @@ jobs:
       - name: Push changes
         if: steps.cmp.outputs.needs_update == 'true'
         run: |
-          git push origin HEAD:main
+          git push origin HEAD:master
 
       - name: Create GitHub releases
         if: steps.cmp.outputs.needs_update == 'true'
@@ -137,7 +137,7 @@ jobs:
               --arg version "$version" \
               '{
                 tag_name: $tag,
-                target_commitish: "main",
+                target_commitish: "master",
                 name: $relname,
                 body: ("Automated release for " + $name + " version " + $version + "."),
                 draft: false,

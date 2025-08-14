@@ -10,8 +10,8 @@
   },
   "files": [
     "LICENSE",
-    "postinstall.cjs",
-    "README.md"
+    "README.md",
+    "bin"
   ],
   "publishConfig": {
     "access": "public"
@@ -33,9 +33,7 @@
     "@resonix/windows-x86_64": "workspace:*",
     "@resonix/windows-aarch64": "workspace:*"
   },
-  "scripts": {
-    "postinstall": "node postinstall.cjs"
-  },
+  "scripts": {},
   "keywords": [
     "resonix",
     "audio",
