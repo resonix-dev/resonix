@@ -25,13 +25,13 @@
     "url": "https://github.com/resonix-dev/resonix/issues"
   },
   "optionalDependencies": {
-    "@resonix/linux-x86_64": "0.1.0",
-    "@resonix/linux-aarch64": "0.1.0",
-    "@resonix/linux-armv7": "0.1.0",
-    "@resonix/macos-x86_64": "0.1.0",
-    "@resonix/macos-aarch64": "0.1.0",
-    "@resonix/windows-x86_64": "0.1.0",
-    "@resonix/windows-aarch64": "0.1.0"
+    "@resonix/linux-x86_64": "workspace:*",
+    "@resonix/linux-aarch64": "workspace:*",
+    "@resonix/linux-armv7": "workspace:*",
+    "@resonix/macos-x86_64": "workspace:*",
+    "@resonix/macos-aarch64": "workspace:*",
+    "@resonix/windows-x86_64": "workspace:*",
+    "@resonix/windows-aarch64": "workspace:*"
   },
   "scripts": {
     "postinstall": "node postinstall.cjs"
