@@ -31,7 +31,10 @@ jobs:
         uses: pnpm/action-setup@v4
         with:
           version: 9
-          run_install: true
+          run_install: false
+
+      - name: Install dependencies (allow lockfile update)
+        run: pnpm install --no-frozen-lockfile
 
       - name: Get latest version tag
         id: latest
