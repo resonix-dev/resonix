@@ -15,9 +15,11 @@ No build hooks, no `postinstall` script. A single runtime resolver `bin/resonix.
 If no supported binary can be found, it prints a warning and exits with code 1.
 
 ### Why optionalDependencies?
+
 Only the matching platform package is actually installed by most package managers; the rest are skipped instead of causing install failures. This keeps installs clean and avoids conditional download logic in scripts.
 
 ### Supported targets
+
 ```
 linux  (x64, arm64, armv7)
 darwin (x64, arm64)
@@ -25,13 +27,17 @@ win32  (x64, arm64)
 ```
 
 ### Forcing / cross‑compiling
+
 If you need to run the resolver against a specific platform binary (e.g. in CI artifacts or inside a container) set:
+
 ```bash
 RESONIX_PLATFORM_PKG=@resonix/linux-x86_64 resonix --version
 ```
+
 You are responsible for ensuring that binary is actually installed (e.g. via adding it as a direct dependency in that environment).
 
 ### Local monorepo development
+
 When working inside this monorepo (or if multiple platform binary packages are present) the fallback scan means the first suitable binary will be used, prioritizing your current platform/arch. This makes local iteration easier without publishing every change.
 
 ## Installation
@@ -60,9 +66,9 @@ All arguments are forwarded directly to the underlying native binary.
 ## Troubleshooting
 
 - Warning: "Unable to locate a platform-specific binary" – The optional dependency for your platform was likely skipped or pruned. Ensure:
-	- You're on a supported OS/architecture.
-	- Optional dependencies are not disabled (e.g. `--no-optional`).
-	- You did not prune node_modules after install (some CI images prune optional deps by default).
+  - You're on a supported OS/architecture.
+  - Optional dependencies are not disabled (e.g. `--no-optional`).
+  - You did not prune node_modules after install (some CI images prune optional deps by default).
 - Force resolution: set `RESONIX_PLATFORM_PKG` explicitly (see above).
 - Still stuck? List installed platform packages: `ls node_modules/@resonix` (PowerShell: `Get-ChildItem node_modules/@resonix`). There should be exactly one matching your platform.
 
