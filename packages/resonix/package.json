@@ -1,6 +1,6 @@
 {
-  "name": "resonix",
-  "version": "0.2.5",
+  "name": "resonix.js",
+  "version": "0.1.0",
   "description": "Official JavaScript client for the Resonix audio node",
   "type": "module",
   "main": "dist/index.js",

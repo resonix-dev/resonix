@@ -1,3 +1,8 @@
 node_modules/
 dist/
-bin/
+.env
+
+**/bin/
+
+!packages/@resonix/node/bin/
+!packages/@resonix/node/bin/resonix.js
