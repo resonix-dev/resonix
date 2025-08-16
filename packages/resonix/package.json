@@ -1,5 +1,5 @@
 {
-  "name": "resonix",
+  "name": "resonix.js",
   "version": "0.1.0",
   "description": "Official JavaScript client for the Resonix audio node",
   "type": "module",

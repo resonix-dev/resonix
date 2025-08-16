@@ -78,12 +78,6 @@ async function main() {
   writeJson(metaPkgPath, metaPkg);
   console.log("[update] meta package versions updated");
 
-  const clientPkgPath = path.join(clientPackageDir, "package.json");
-  const clientPkg = readJson(clientPkgPath);
-  clientPkg.version = latest;
-  writeJson(clientPkgPath, clientPkg);
-  console.log("[update] client package version updated");
-
   return { changed: true, latest };
 }
 
