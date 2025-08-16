@@ -7,7 +7,7 @@ import {
   SlashCommandBuilder,
   ChannelType,
 } from "discord.js";
-import { ResonixNode, ResonixManager } from "resonix";
+import { ResonixNode, ResonixManager } from "../../packages/resonix/dist/index.js";
 
 const TOKEN = process.env.DISCORD_TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
