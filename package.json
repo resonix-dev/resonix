@@ -1,6 +1,6 @@
 {
   "name": "resonix-monorepo",
-  "version": "0.2.6",
+  "version": "0.2.8",
   "description": "Monorepo for Resonix JS packages and examples",
   "license": "BSD-3-Clause",
   "author": "Resonix OSS Team",

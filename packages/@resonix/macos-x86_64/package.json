@@ -1,6 +1,6 @@
 {
   "name": "@resonix/macos-x86_64",
-  "version": "0.2.6",
+  "version": "0.2.8",
   "private": false,
   "description": "Platform specific binary package for Resonix (macOS x86_64)",
   "license": "BSD-3-Clause",
