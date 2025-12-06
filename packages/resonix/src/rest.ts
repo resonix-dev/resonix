@@ -1,4 +1,9 @@
-import type { CreatePlayerPayload, ResonixFiltersPayload } from "./types.js";
+import type {
+  CreatePlayerPayload,
+  ResonixEnqueuePayload,
+  ResonixFiltersPayload,
+  ResonixLoopMode,
+} from "./types.js";
 
 /**
  * Lightweight wrapper around the Resonix REST API.
@@ -73,5 +78,40 @@ export class ResonixRest {
       headers: { "content-type": "application/json" },
       body: JSON.stringify(d),
     });
+  }
+
+  /** Enqueue a track for an existing player. */
+  async enqueue(id: string, payload: ResonixEnqueuePayload) {
+    const res = await this.fetcher(this.url(`/players/${id}/queue`), {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      throw new Error(`enqueue failed: ${res.status}`);
+    }
+    return res.json() as Promise<{ trackId: string }>;
+  }
+
+  /** Set the loop mode for a player. */
+  async setLoopMode(id: string, mode: ResonixLoopMode) {
+    const res = await this.fetcher(this.url(`/players/${id}/loop`), {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ mode }),
+    });
+    if (!res.ok) {
+      throw new Error(`setLoopMode failed: ${res.status}`);
+    }
+  }
+
+  /** Skip the currently playing track. */
+  async skip(id: string) {
+    const res = await this.fetcher(this.url(`/players/${id}/skip`), {
+      method: "POST",
+    });
+    if (!res.ok) {
+      throw new Error(`skip failed: ${res.status}`);
+    }
   }
 }

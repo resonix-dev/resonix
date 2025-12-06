@@ -51,12 +51,8 @@ const commands = [
           { name: "queue", value: "queue" },
         ),
     ),
-  new SlashCommandBuilder()
-    .setName("pause")
-    .setDescription("Pause playback"),
-  new SlashCommandBuilder()
-    .setName("resume")
-    .setDescription("Resume playback"),
+  new SlashCommandBuilder().setName("pause").setDescription("Pause playback"),
+  new SlashCommandBuilder().setName("resume").setDescription("Resume playback"),
   new SlashCommandBuilder()
     .setName("volume")
     .setDescription("Set volume (0.0-5.0)")
@@ -144,8 +140,16 @@ client.on("interactionCreate", async (itx) => {
           content: "Nothing to skip.",
           flags: 64, // ephemeral
         });
-      await p.skip().catch(() => {});
-      return void itx.editReply({ content: "Skipped.", flags: 64 });
+      try {
+        await p.skip();
+        return void itx.editReply({ content: "Skipped.", flags: 64 });
+      } catch (err) {
+        console.error("Skip failed", err);
+        return void itx.editReply({
+          content: "Skip failed.",
+          flags: 64,
+        });
+      }
     }
     case "loopmode": {
       const m = itx.options.getString("mode", true);
@@ -158,8 +162,16 @@ client.on("interactionCreate", async (itx) => {
       let mode = "none";
       if (m === "track") mode = "track";
       else if (m === "queue") mode = "queue";
-      await p.setLoopMode(mode).catch(() => {});
-      return void itx.editReply({ content: `Loop mode -> ${m}`, flags: 64 });
+      try {
+        await p.setLoopMode(mode);
+        return void itx.editReply({ content: `Loop mode -> ${m}`, flags: 64 });
+      } catch (err) {
+        console.error("Loop mode failed", err);
+        return void itx.editReply({
+          content: "Loop mode failed.",
+          flags: 64,
+        });
+      }
     }
     case "play": {
       const url = itx.options.getString("url", true);

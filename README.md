@@ -7,7 +7,7 @@ Multi-platform prebuilt binaries and Node.js wrapper for the Resonix audio node.
 This monorepo contains:
 
 - `resonix` - TypeScript/JS API
-	- Note: The Resonix node now prefers to stream remote audio directly from resolved URLs (via `yt-dlp`) and does not write full remote tracks to temporary files by default. The native node requires `yt-dlp` and `ffmpeg` for resolver and streaming/transcoding features.
+  - Note: The Resonix node now resolves YouTube/SoundCloud streams via the Rust `riva` crate and streams them directly instead of downloading mp3 caches. The native node only requires `ffmpeg` for codec fallback/transcoding.
 - Platform-specific binary packages (`@resonix/linux-x86_64`, etc.)
 - `@resonix/node` - Node.js launcher / CLI shim
 

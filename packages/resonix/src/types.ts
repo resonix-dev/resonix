@@ -27,6 +27,15 @@ export interface ResonixFiltersPayload {
   volume?: number;
 }
 
+/** Looping behavior supported by the backend resolver. */
+export type ResonixLoopMode = "none" | "track" | "queue";
+
+/** Payload accepted by the /queue endpoint for appending tracks. */
+export interface ResonixEnqueuePayload {
+  uri: string;
+  metadata?: Record<string, unknown>;
+}
+
 /**
  * Options when instantiating a {@link ResonixNode}. These map to the server base URL
  * and feature toggles for the runtime.

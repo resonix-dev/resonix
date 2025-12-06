@@ -12,7 +12,7 @@ Requirements
 - Node 18+
 - Resonix node (default: http://127.0.0.1:2333)
 - No system ffmpeg required
-- Optional: yt-dlp if you enable resolving (server env: RESONIX_RESOLVE=1)
+- Optional: enable resolving on the node via `RESONIX_RESOLVE=1` (the node now uses Riva for direct streams and auto-manages ffmpeg)
 
 Setup
 

@@ -5,6 +5,7 @@ import {
   StreamType,
   AudioPlayer,
   AudioPlayerStatus,
+  type AudioResource,
   VoiceConnection,
   entersState,
   VoiceConnectionStatus,
@@ -12,7 +13,7 @@ import {
 import { Readable } from "node:stream";
 import WebSocket from "ws";
 import { ResonixRest } from "./rest.js";
-import type { ResonixNodeOptions } from "./types.js";
+import type { ResonixLoopMode, ResonixNodeOptions } from "./types.js";
 
 /**
  * Simple readable stream that accepts raw PCM frame buffers pushed from the
@@ -43,6 +44,27 @@ export class ResonixPlayer {
   public readonly audioPlayer: AudioPlayer;
   private ws?: WebSocket;
   private stream?: PcmFrameStream;
+  private resource?: AudioResource;
+
+  /** Ensure a fresh PCM stream + Discord audio resource exist. */
+  private initResource() {
+    if (this.stream && this.resource) return;
+    this.stream?.endStream();
+    this.stream = new PcmFrameStream();
+    this.resource = createAudioResource(this.stream, {
+      inputType: StreamType.Raw,
+      inlineVolume: true,
+    });
+    if (this.opts.debug)
+      console.log("[resonix] audio resource (re)created (raw)");
+  }
+
+  /** Tear down the local PCM stream + audio resource. */
+  private clearResource() {
+    this.stream?.endStream();
+    this.stream = undefined;
+    this.resource = undefined;
+  }
 
   /**
    * @param rest REST client used for control operations.
@@ -63,6 +85,12 @@ export class ResonixPlayer {
       behaviors: { noSubscriber: NoSubscriberBehavior.Play },
     });
     this.connection.subscribe(this.audioPlayer);
+
+    this.audioPlayer.on(AudioPlayerStatus.Idle, () => {
+      if (this.opts.debug)
+        console.log("[resonix] audio player idle, awaiting next frames");
+      this.clearResource();
+    });
   }
 
   /**
@@ -71,12 +99,20 @@ export class ResonixPlayer {
    * @param uri Audio source (file path / URL) supported by backend.
    */
   async play(uri: string) {
-    // Cleanup existing
+    const hasActiveStream =
+      this.ws !== undefined && this.ws.readyState === WebSocket.OPEN;
+
+    if (hasActiveStream) {
+      const res = await this.rest.enqueue(this.id, { uri });
+      const suffix = res?.trackId ? ` (track ${res.trackId})` : "";
+      console.log(`[resonix] queued track ${uri}${suffix}`);
+      return;
+    }
+
     await this.rest.deletePlayer(this.id).catch(() => undefined);
     this.ws?.close();
     this.ws = undefined;
-    this.stream?.endStream();
-    this.stream = undefined;
+    this.clearResource();
     this.audioPlayer.stop();
 
     await this.rest.createPlayer({ id: this.id, uri });
@@ -86,17 +122,12 @@ export class ResonixPlayer {
     const base = this.opts.baseUrl.replace(/\/$/, "");
     const wsUrl = `${base.replace("http://", "ws://").replace("https://", "wss://")}${version}/players/${this.id}/ws`;
     this.ws = new WebSocket(wsUrl);
-    this.stream = new PcmFrameStream();
-    const resource = createAudioResource(this.stream, {
-      inputType: StreamType.Raw,
-      inlineVolume: true,
-    });
-    if (this.opts.debug) console.log("[resonix] audio resource created (raw)");
+    this.initResource();
 
     try {
       await entersState(this.connection, VoiceConnectionStatus.Ready, 10_000);
     } catch {}
-    this.audioPlayer.play(resource);
+    if (this.resource) this.audioPlayer.play(this.resource);
     if (this.opts.debug) {
       this.audioPlayer.on("debug", (m) => console.log("[resonix] ap debug", m));
       this.audioPlayer.on("error", (e) =>
@@ -109,6 +140,35 @@ export class ResonixPlayer {
       const buf = Buffer.isBuffer(data)
         ? data
         : Buffer.from(data as unknown as Buffer);
+      this.initResource();
+      const stream = this.stream;
+      let resource = this.resource;
+      if (!stream || !resource) return;
+
+      const status = this.audioPlayer.state.status;
+      if (
+        status === AudioPlayerStatus.Idle ||
+        status === AudioPlayerStatus.AutoPaused
+      ) {
+        try {
+          this.audioPlayer.play(resource);
+          if (this.opts.debug)
+            console.log("[resonix] resumed audio player after idle");
+        } catch (err) {
+          if (err instanceof Error && err.message.includes("already ended")) {
+            this.clearResource();
+            this.initResource();
+            resource = this.resource;
+            if (resource) {
+              this.audioPlayer.play(resource);
+            }
+          } else {
+            throw err;
+          }
+        }
+      } else if (status === AudioPlayerStatus.Paused) {
+        this.audioPlayer.unpause();
+      }
       if (pkt < 5 || this.opts.debug) {
         // Expect 20ms 48kHz stereo s16le => 48000 * 2 (stereo) * 2 (bytes) * 0.02 = 3840 bytes
         const expected = 3840;
@@ -134,14 +194,16 @@ export class ResonixPlayer {
         }
       }
       pkt++;
-      this.stream?.pushPacket(buf as Buffer);
+      stream.pushPacket(buf as Buffer);
     });
     this.ws.on("close", () => {
-      this.stream?.endStream();
+      this.clearResource();
+      this.ws = undefined;
     });
     this.ws.on("error", (e) => {
       console.error("[resonix] ws error", e);
-      this.stream?.endStream();
+      this.clearResource();
+      this.ws = undefined;
     });
 
     this.audioPlayer.on(AudioPlayerStatus.Playing, () =>
@@ -164,14 +226,26 @@ export class ResonixPlayer {
     await this.rest.filters(this.id, { volume: v });
   }
 
+  /** Skip the currently playing track (remote queue). */
+  async skip() {
+    await this.rest.skip(this.id);
+  }
+
+  /** Update the backend loop mode. */
+  async setLoopMode(mode: ResonixLoopMode) {
+    await this.rest.setLoopMode(this.id, mode);
+    console.log(`[resonix] loop mode -> ${mode}`);
+  }
+
   /**
    * Tear down websocket, stream, audio player and inform the backend.
    * Safe to call multiple times.
    */
   destroy() {
     this.ws?.close();
-    this.stream?.endStream();
+    this.clearResource();
     this.audioPlayer.stop();
+    this.ws = undefined;
     void this.rest.deletePlayer(this.id);
   }
 }
