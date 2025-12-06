@@ -31,8 +31,32 @@ const commands = [
     .addStringOption((o) =>
       o.setName("url").setDescription("Direct media URL").setRequired(true),
     ),
-  new SlashCommandBuilder().setName("pause").setDescription("Pause playback"),
-  new SlashCommandBuilder().setName("resume").setDescription("Resume playback"),
+  new SlashCommandBuilder()
+    .setName("stop")
+    .setDescription("Stop playback and clear the queue"),
+  new SlashCommandBuilder()
+    .setName("skip")
+    .setDescription("Skip the current track"),
+  new SlashCommandBuilder()
+    .setName("loopmode")
+    .setDescription("Set the loop mode")
+    .addStringOption((o) =>
+      o
+        .setName("mode")
+        .setDescription("Loop mode")
+        .setRequired(true)
+        .addChoices(
+          { name: "off", value: "off" },
+          { name: "track", value: "track" },
+          { name: "queue", value: "queue" },
+        ),
+    ),
+  new SlashCommandBuilder()
+    .setName("pause")
+    .setDescription("Pause playback"),
+  new SlashCommandBuilder()
+    .setName("resume")
+    .setDescription("Resume playback"),
   new SlashCommandBuilder()
     .setName("volume")
     .setDescription("Set volume (0.0-5.0)")
@@ -102,6 +126,40 @@ client.on("interactionCreate", async (itx) => {
     case "leave": {
       await manager.leave(gid);
       return void itx.editReply({ content: "Left.", flags: 64 });
+    }
+    case "stop": {
+      const p = manager.get(gid);
+      if (!p)
+        return void itx.editReply({
+          content: "Nothing to stop.",
+          flags: 64, // ephemeral
+        });
+      p.destroy();
+      return void itx.editReply({ content: "Stopped.", flags: 64 });
+    }
+    case "skip": {
+      const p = manager.get(gid);
+      if (!p)
+        return void itx.editReply({
+          content: "Nothing to skip.",
+          flags: 64, // ephemeral
+        });
+      await p.skip().catch(() => {});
+      return void itx.editReply({ content: "Skipped.", flags: 64 });
+    }
+    case "loopmode": {
+      const m = itx.options.getString("mode", true);
+      const p = manager.get(gid);
+      if (!p)
+        return void itx.editReply({
+          content: "No player.",
+          flags: 64, // ephemeral
+        });
+      let mode = "none";
+      if (m === "track") mode = "track";
+      else if (m === "queue") mode = "queue";
+      await p.setLoopMode(mode).catch(() => {});
+      return void itx.editReply({ content: `Loop mode -> ${m}`, flags: 64 });
     }
     case "play": {
       const url = itx.options.getString("url", true);

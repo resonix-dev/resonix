@@ -62,26 +62,26 @@ importers:
   packages/@resonix/node:
     optionalDependencies:
       '@resonix/linux-aarch64':
-        specifier: 0.2.6
-        version: 0.2.6
+        specifier: 0.2.8
+        version: 0.2.8
       '@resonix/linux-armv7':
-        specifier: 0.2.6
-        version: 0.2.6
+        specifier: 0.2.8
+        version: 0.2.8
       '@resonix/linux-x86_64':
-        specifier: 0.2.6
-        version: 0.2.6
+        specifier: 0.2.8
+        version: 0.2.8
       '@resonix/macos-aarch64':
-        specifier: 0.2.6
-        version: 0.2.6
+        specifier: 0.2.8
+        version: 0.2.8
       '@resonix/macos-x86_64':
-        specifier: 0.2.6
-        version: 0.2.6
+        specifier: 0.2.8
+        version: 0.2.8
       '@resonix/windows-aarch64':
-        specifier: 0.2.6
-        version: 0.2.6
+        specifier: 0.2.8
+        version: 0.2.8
       '@resonix/windows-x86_64':
-        specifier: 0.2.6
-        version: 0.2.6
+        specifier: 0.2.8
+        version: 0.2.8
 
   packages/@resonix/windows-aarch64: {}
 
@@ -182,38 +182,38 @@ packages:
     resolution: {integrity: sha512-wgm9Ehl2jpeqP3zw/7mo3kRHFp5MEDhqAdwy1fTGkHAwnkGOVsgpvQhL8B5n1qlb01jV3n/bI0ZfZp5lWA1k4w==}
     engines: {node: '>=18.0.0'}
 
-  '@resonix/linux-aarch64@0.2.6':
-    resolution: {integrity: sha512-gtfW6u/cs6YkapMvB+xYYTnxSeOKL34SLm2QFJoI/2Vr7l6UyOtvoegSfWLaaLRsYEj+JwH27780HZg+CAcvLg==}
+  '@resonix/linux-aarch64@0.2.8':
+    resolution: {integrity: sha512-JH0QVtNMm4UMjdzNUDhWmWAKBh8PuBOSPhtuFmZIMIuVGTAblxfTuEjGnL9swcH1ASBYPWCrs6N+cwoVwUrCoA==}
     cpu: [arm64]
     os: [linux]
 
-  '@resonix/linux-armv7@0.2.6':
-    resolution: {integrity: sha512-HXKV9wUt89rhgyrOOmQfM0Vqhp/5csgIJqOVIfREjL5oJOWCmrVvlPObWN+3PdTUARjLdU6cqwQizj2jaWmBtQ==}
+  '@resonix/linux-armv7@0.2.8':
+    resolution: {integrity: sha512-/oGbPhMpJrnfMD+0EX3illC86Aef72tIbc3x/nmgD6UA0y0GoOAj9wC9fAqrvMkidYEv9urxaXtGXBiygFE8nA==}
     cpu: [arm]
     os: [linux]
 
-  '@resonix/linux-x86_64@0.2.6':
-    resolution: {integrity: sha512-JWJHW1eL/7ueEA5T+H01wp+Ah+xKwNsAt4jDJcjBcF5wHfPTZWHDOQu6LboYPmxvy/jP2H75bJPyaMb4nzzYhA==}
+  '@resonix/linux-x86_64@0.2.8':
+    resolution: {integrity: sha512-wuUavYmGe1hhNiw+2cDuSrpoXi1HHjKYEdjDnn/Ybvh/WCsTV9icIXd31YYOBIsxcWzbxxAv8Xdb1PPcHOLiKw==}
     cpu: [x64]
     os: [linux]
 
-  '@resonix/macos-aarch64@0.2.6':
-    resolution: {integrity: sha512-8o95VdzhZbGNa6wlxl5XmL7S0ge1ZKMLS1/TizoeApEhR1GMaGSAsnNMZW4CAXyIoQdBpPFMeNoSdCK7t6aS2A==}
+  '@resonix/macos-aarch64@0.2.8':
+    resolution: {integrity: sha512-xq6dnl8Xe8TpsyLjx2Ju/WvGbQ3wwKkVDWQP4Q9PYH2Ferbrzf3dKRcLg7rhrTFxW9OKRS01mewCByHugHzsRQ==}
     cpu: [arm64]
     os: [darwin]
 
-  '@resonix/macos-x86_64@0.2.6':
-    resolution: {integrity: sha512-4LqfLTepUBfzMLYtP/0x15S1KjT1EANf9Ls783yDWxB4XU11nfHT3i9SijNvBOVyFLIkc65CQPRERwtReepuzQ==}
+  '@resonix/macos-x86_64@0.2.8':
+    resolution: {integrity: sha512-wWVvcpC1oL+f6SYPz1tzk8saKv4ylNzYzTFLyvfjHwInkQlv8jUh5iCjseho33GNGefQOGplDcaBnKXuB8vifg==}
     cpu: [x64]
     os: [darwin]
 
-  '@resonix/windows-aarch64@0.2.6':
-    resolution: {integrity: sha512-jkWjk82J3yZ0zSkAaVWCQs+b+zXK0HR5Mi15wTJZtdQXIAIsaLpXePzYwabVETAWLU/7J4FOQVLoQw/zrYOs4w==}
+  '@resonix/windows-aarch64@0.2.8':
+    resolution: {integrity: sha512-ynlNJLQ5MZZweF0GeEB1zSGyyIH09LbGvb8vFLekkr8r7ZDI8Q0GMRIS96bZextoABldOTVffr8uh7EBPtIUJA==}
     cpu: [arm64]
     os: [win32]
 
-  '@resonix/windows-x86_64@0.2.6':
-    resolution: {integrity: sha512-rIdQ8WH1Pj9jdQmvYLtp235lXlzoSgDSzjZMBtZLxhcnc7nxRSoqJp4YmQ0NKO+/jF3b3BHHwUj2V5yZmmzRRQ==}
+  '@resonix/windows-x86_64@0.2.8':
+    resolution: {integrity: sha512-aZ/7pooJDv5LV2vhbuDG0wdsFP4lnUswn7XLNmEMN9/NMafI4e0SZjNe2AgQ3OLePXd5cwxgS3lEOB4sf8bZxw==}
     cpu: [x64]
     os: [win32]
 
@@ -535,6 +535,7 @@ packages:
   node-opus@0.3.3:
     resolution: {integrity: sha512-ZQniA8iJ6y/qOTmW6eyzM9m8odt4CIGV0NM9/U03/pYLhGyxy18QXO25WfrWd8XsUYx57tnxll2xxj54CN08uQ==}
     engines: {node: '>=5.10.0'}
+    cpu: [x64, arm, arm64, ia32]
     os: [linux, darwin, win32, freebsd, android]
     deprecated: This project is unmaintained. See @discordjs/opus for an alternative.
 
@@ -864,25 +865,25 @@ snapshots:
     dependencies:
       minipass: 7.1.2
 
-  '@resonix/linux-aarch64@0.2.6':
+  '@resonix/linux-aarch64@0.2.8':
     optional: true
 
-  '@resonix/linux-armv7@0.2.6':
+  '@resonix/linux-armv7@0.2.8':
     optional: true
 
-  '@resonix/linux-x86_64@0.2.6':
+  '@resonix/linux-x86_64@0.2.8':
     optional: true
 
-  '@resonix/macos-aarch64@0.2.6':
+  '@resonix/macos-aarch64@0.2.8':
     optional: true
 
-  '@resonix/macos-x86_64@0.2.6':
+  '@resonix/macos-x86_64@0.2.8':
     optional: true
 
-  '@resonix/windows-aarch64@0.2.6':
+  '@resonix/windows-aarch64@0.2.8':
     optional: true
 
-  '@resonix/windows-x86_64@0.2.6':
+  '@resonix/windows-x86_64@0.2.8':
     optional: true
 
   '@sapphire/async-queue@1.5.5': {}
