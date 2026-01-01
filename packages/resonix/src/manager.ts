@@ -7,6 +7,8 @@ import {
 import type { Client, Snowflake } from "discord.js";
 import { ResonixNode } from "./node.js";
 import { ResonixPlayer } from "./player.js";
+import { EventEmitter } from "./events.js";
+import type { PlayerEventMap } from "./types.js";
 
 export interface JoinOptions {
   guildId: Snowflake;
@@ -17,8 +19,9 @@ export interface JoinOptions {
 
 /**
  * Orchestrates creation / lifecycle of {@link ResonixPlayer} instances per guild.
+ * Extends EventEmitter to delegate events from players for centralized event handling.
  */
-export class ResonixManager {
+export class ResonixManager extends EventEmitter<PlayerEventMap> {
   private players = new Map<Snowflake, ResonixPlayer>();
   /**
    * @param client Discord.js client instance.
@@ -27,7 +30,9 @@ export class ResonixManager {
   constructor(
     public readonly client: Client,
     public readonly node: ResonixNode,
-  ) {}
+  ) {
+    super();
+  }
 
   /**
    * Join a voice channel and resolve when the connection is ready.
@@ -58,6 +63,21 @@ export class ResonixManager {
         guildId,
         connection,
       );
+      
+      // Delegate all player events to the manager
+      p.on("trackStart", (event) => this.emit("trackStart", event).catch(() => {}));
+      p.on("trackEnd", (event) => this.emit("trackEnd", event).catch(() => {}));
+      p.on("trackError", (event) => this.emit("trackError", event).catch(() => {}));
+      p.on("playerError", (event) => this.emit("playerError", event).catch(() => {}));
+      p.on("trackQueued", (event) => this.emit("trackQueued", event).catch(() => {}));
+      p.on("playerPause", (event) => this.emit("playerPause", event).catch(() => {}));
+      p.on("playerResume", (event) => this.emit("playerResume", event).catch(() => {}));
+      
+      this.emit("playerCreate", {
+        player: p.id,
+        guildId,
+      }).catch(() => {});
+      
       this.players.set(guildId, p);
     }
     return p;
@@ -71,7 +91,14 @@ export class ResonixManager {
   async destroy(guildId: Snowflake) {
     const p = this.players.get(guildId);
     if (p) {
+      const playerId = p.id;
       p.destroy();
+      
+      this.emit("playerDestroy", {
+        player: playerId,
+        guildId,
+      }).catch(() => {});
+      
       this.players.delete(guildId);
     }
   }

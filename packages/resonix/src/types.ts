@@ -11,6 +11,105 @@ export interface ResonixPlayerState {
 }
 
 /**
+ * Represents a track being played.
+ */
+export interface ResonixTrack {
+  uri: string;
+  metadata?: Record<string, unknown>;
+  trackId?: string;
+}
+
+/**
+ * Event emitted when a track starts playing.
+ */
+export interface TrackStartEvent {
+  player: string; // player id
+  track: ResonixTrack;
+}
+
+/**
+ * Event emitted when a track ends.
+ */
+export interface TrackEndEvent {
+  player: string; // player id
+  track: ResonixTrack;
+  reason: "finished" | "stopped" | "replaced" | "cleanup";
+}
+
+/**
+ * Event emitted when a track fails to play.
+ */
+export interface TrackErrorEvent {
+  player: string; // player id
+  track: ResonixTrack;
+  error: Error;
+}
+
+/**
+ * Event emitted when the player encounters an error.
+ */
+export interface PlayerErrorEvent {
+  player: string; // player id
+  error: Error;
+}
+
+/**
+ * Event emitted when a track is queued.
+ */
+export interface TrackQueuedEvent {
+  player: string; // player id
+  track: ResonixTrack;
+  position: number;
+}
+
+/**
+ * Event emitted when playback is paused.
+ */
+export interface PlayerPauseEvent {
+  player: string; // player id
+  track: ResonixTrack;
+}
+
+/**
+ * Event emitted when playback resumes.
+ */
+export interface PlayerResumeEvent {
+  player: string; // player id
+  track: ResonixTrack;
+}
+
+/**
+ * Event emitted when a player is created.
+ */
+export interface PlayerCreateEvent {
+  player: string; // player id
+  guildId: Snowflake;
+}
+
+/**
+ * Event emitted when a player is destroyed.
+ */
+export interface PlayerDestroyEvent {
+  player: string; // player id
+  guildId: Snowflake;
+}
+
+/**
+ * Union type of all possible player events.
+ */
+export type PlayerEventMap = {
+  trackStart: [TrackStartEvent];
+  trackEnd: [TrackEndEvent];
+  trackError: [TrackErrorEvent];
+  playerError: [PlayerErrorEvent];
+  trackQueued: [TrackQueuedEvent];
+  playerPause: [PlayerPauseEvent];
+  playerResume: [PlayerResumeEvent];
+  playerCreate: [PlayerCreateEvent];
+  playerDestroy: [PlayerDestroyEvent];
+};
+
+/**
  * Payload used when creating a new remote player on the Resonix backend.
  * The id is a locally decided identifier (guild based in this lib) and `uri` is
  * the audio source (file path / URL) supported by the backend.

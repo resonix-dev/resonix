@@ -16,6 +16,7 @@ const TOKEN = process.env.DISCORD_TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
 const GUILD_ID = process.env.GUILD_ID;
 const RESONIX_BASE = process.env.RESONIX_BASE || "http://localhost:2333";
+const LOG_CHANNEL_ID = "1313098030194622535";
 
 // --- Commands ---
 const commands = [
@@ -80,6 +81,80 @@ const client = new Client({
 });
 const node = new ResonixNode({ baseUrl: RESONIX_BASE, version: "v0" });
 const manager = new ResonixManager(client, node);
+
+async function logToChannel(message) {
+  try {
+    const channel = await client.channels.fetch(LOG_CHANNEL_ID);
+    if (channel?.isTextBased()) {
+      await channel.send(message);
+    }
+  } catch (e) {
+    console.error("Failed to send log message to channel:", e.message);
+  }
+}
+
+manager.on("trackStart", async (event) => {
+  const { player, track } = event;
+  const msg = `🎵 **Track Started**\nPlayer: \`${player}\`\nURI: ${track.uri}`;
+  await logToChannel(msg);
+  console.log(`[Event] Track started: ${track.uri}`);
+});
+
+manager.on("trackEnd", async (event) => {
+  const { player, track, reason } = event;
+  const msg = `⏹️ **Track Ended** (${reason})\nPlayer: \`${player}\`\nURI: ${track.uri}`;
+  await logToChannel(msg);
+  console.log(`[Event] Track ended: ${track.uri} (reason: ${reason})`);
+});
+
+manager.on("trackQueued", async (event) => {
+  const { player, track, position } = event;
+  const msg = `📋 **Track Queued**\nPlayer: \`${player}\`\nPosition: ${position}\nURI: ${track.uri}`;
+  await logToChannel(msg);
+  console.log(`[Event] Track queued: ${track.uri}`);
+});
+
+manager.on("playerPause", async (event) => {
+  const { player, track } = event;
+  const msg = `⏸️ **Playback Paused**\nPlayer: \`${player}\`\nTrack: ${track.uri}`;
+  await logToChannel(msg);
+  console.log(`[Event] Player paused`);
+});
+
+manager.on("playerResume", async (event) => {
+  const { player, track } = event;
+  const msg = `▶️ **Playback Resumed**\nPlayer: \`${player}\`\nTrack: ${track.uri}`;
+  await logToChannel(msg);
+  console.log(`[Event] Player resumed`);
+});
+
+manager.on("playerError", async (event) => {
+  const { player, error } = event;
+  const msg = `❌ **Player Error**\nPlayer: \`${player}\`\nError: \`${error.message}\``;
+  await logToChannel(msg);
+  console.error(`[Event] Player error: ${error.message}`);
+});
+
+manager.on("trackError", async (event) => {
+  const { player, track, error } = event;
+  const msg = `⚠️ **Track Error**\nPlayer: \`${player}\`\nTrack: ${track.uri}\nError: \`${error.message}\``;
+  await logToChannel(msg);
+  console.error(`[Event] Track error: ${error.message}`);
+});
+
+manager.on("playerCreate", async (event) => {
+  const { player, guildId } = event;
+  const msg = `✅ **Player Created**\nPlayer: \`${player}\`\nGuild: \`${guildId}\``;
+  await logToChannel(msg);
+  console.log(`[Event] Player created for guild ${guildId}`);
+});
+
+manager.on("playerDestroy", async (event) => {
+  const { player, guildId } = event;
+  const msg = `🚫 **Player Destroyed**\nPlayer: \`${player}\`\nGuild: \`${guildId}\``;
+  await logToChannel(msg);
+  console.log(`[Event] Player destroyed for guild ${guildId}`);
+});
 
 client.once("ready", async () => {
   console.log(`Logged in as ${client.user.tag}`);
