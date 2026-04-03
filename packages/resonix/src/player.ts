@@ -21,20 +21,105 @@ import type {
 } from "./types.js";
 import { EventEmitter } from "./events.js";
 
+const PCM_FRAME_BYTES = 3840;
+const FRAME_DURATION_MS = 20;
+const IDLE_END_GRACE_MS = 1500;
+
 /**
  * Simple readable stream that accepts raw PCM frame buffers pushed from the
  * Resonix websocket and exposes them to the Discord audio player.
  */
 class PcmFrameStream extends Readable {
-  constructor() {
-    super({ read() {} });
+  private readonly queue: Buffer[] = [];
+  private drainTimer?: NodeJS.Timeout;
+  private ended = false;
+  private started = false;
+  private droppedFrames = 0;
+  private underflowCount = 0;
+
+  constructor(private readonly debug = false) {
+    super({
+      read() {},
+      highWaterMark: PCM_FRAME_BYTES * 48,
+    });
+    this.startDrainLoop();
   }
+
   /** Push a single PCM packet buffer into the stream. */
-  pushPacket(buf: Buffer) {
-    this.push(buf);
+  pushPacket(buf: Buffer): boolean {
+    if (this.ended) return false;
+
+    if (buf.length !== PCM_FRAME_BYTES) {
+      if (this.debug) {
+        console.warn(
+          `[resonix] dropping malformed PCM frame (${buf.length} bytes, expected ${PCM_FRAME_BYTES})`,
+        );
+      }
+      return false;
+    }
+
+    this.queue.push(buf);
+
+    const maxBufferedFrames = 120;
+    if (this.queue.length > maxBufferedFrames) {
+      const overflow = this.queue.length - maxBufferedFrames;
+      this.queue.splice(0, overflow);
+      this.droppedFrames += overflow;
+      if (this.debug && this.droppedFrames % 50 === 0) {
+        console.warn(
+          `[resonix] jitter buffer overflow: dropped ${this.droppedFrames} frame(s) so far`,
+        );
+      }
+    }
+
+    const prebufferFrames = 5;
+    if (!this.started && this.queue.length >= prebufferFrames) {
+      this.started = true;
+    }
+
+    return true;
   }
+
+  hasBufferedAudio() {
+    return this.queue.length > 0;
+  }
+
+  queuedFrames() {
+    return this.queue.length;
+  }
+
+  private startDrainLoop() {
+    this.drainTimer = setInterval(() => {
+      if (this.ended || !this.started) {
+        return;
+      }
+
+      const frame = this.queue.shift();
+      if (!frame) {
+        this.started = false;
+        this.underflowCount += 1;
+        if (this.debug && this.underflowCount % 25 === 0) {
+          console.warn(
+            `[resonix] jitter buffer underflow count: ${this.underflowCount}`,
+          );
+        }
+        return;
+      }
+
+      this.push(frame);
+    }, FRAME_DURATION_MS);
+    this.drainTimer.unref?.();
+  }
+
   /** Signal that no more frames will arrive. */
   endStream() {
+    if (this.ended) return;
+    this.ended = true;
+    if (this.drainTimer) {
+      clearInterval(this.drainTimer);
+      this.drainTimer = undefined;
+    }
+    this.queue.length = 0;
     this.push(null);
   }
 }
@@ -53,13 +138,61 @@ export class ResonixPlayer extends EventEmitter<PlayerEventMap> {
   private stream?: PcmFrameStream;
   private resource?: AudioResource;
   private currentTrack?: ResonixTrack;
+  private finishedEmittedForCurrentTrack = false;
+  private idleFinishTimer?: NodeJS.Timeout;
+  private lastPacketAt = 0;
   private isDestroyed = false;
+
+  /** Cancel any pending idle-to-finished transition. */
+  private clearIdleFinishTimer() {
+    if (!this.idleFinishTimer) return;
+    clearTimeout(this.idleFinishTimer);
+    this.idleFinishTimer = undefined;
+  }
+
+  /**
+   * Audio starvation can briefly transition to Idle under load. Delay end
+   * signaling so transient network/CPU blips do not terminate playback.
+   */
+  private scheduleFinishedFromIdle() {
+    this.clearIdleFinishTimer();
+    if (
+      !this.currentTrack ||
+      this.isDestroyed ||
+      this.finishedEmittedForCurrentTrack
+    ) {
+      return;
+    }
+
+    const trackAtSchedule = this.currentTrack;
+    this.idleFinishTimer = setTimeout(() => {
+      this.idleFinishTimer = undefined;
+
+      if (this.isDestroyed || this.finishedEmittedForCurrentTrack) return;
+      if (!this.currentTrack || this.currentTrack !== trackAtSchedule) return;
+      if (this.audioPlayer.state.status !== AudioPlayerStatus.Idle) return;
+
+      const sinceLastPacket = Date.now() - this.lastPacketAt;
+      if (sinceLastPacket < IDLE_END_GRACE_MS) return;
+      if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+        if (this.stream?.hasBufferedAudio()) return;
+      }
+
+      this.finishedEmittedForCurrentTrack = true;
+      this.emit("trackEnd", {
+        player: this.id,
+        track: this.currentTrack,
+        reason: "finished",
+      }).catch((e) => console.error("[resonix] error emitting trackEnd", e));
+    }, IDLE_END_GRACE_MS);
+    this.idleFinishTimer.unref?.();
+  }
 
   /** Ensure a fresh PCM stream + Discord audio resource exist. */
   private initResource() {
     if (this.stream && this.resource) return;
     this.stream?.endStream();
-    this.stream = new PcmFrameStream();
+    this.stream = new PcmFrameStream(Boolean(this.opts.debug));
     this.resource = createAudioResource(this.stream, {
       inputType: StreamType.Raw,
       inlineVolume: true,
@@ -99,16 +232,40 @@ export class ResonixPlayer extends EventEmitter<PlayerEventMap> {
     this.audioPlayer.on(AudioPlayerStatus.Idle, () => {
       if (this.opts.debug)
         console.log("[resonix] audio player idle, awaiting next frames");
-      
-      if (this.currentTrack && !this.isDestroyed) {
-        this.emit("trackEnd", {
-          player: this.id,
-          track: this.currentTrack,
-          reason: "finished",
-        }).catch((e) => console.error("[resonix] error emitting trackEnd", e));
-      }
-      this.clearResource();
+
+      this.scheduleFinishedFromIdle();
     });
+
+    this.audioPlayer.on(AudioPlayerStatus.Playing, () => {
+      if (this.currentTrack) {
+        console.log(`[resonix] playing ${this.currentTrack.uri}`);
+      }
+    });
+
+    if (this.opts.debug) {
+      this.audioPlayer.on("debug", (m) => console.log("[resonix] ap debug", m));
+      this.audioPlayer.on("error", (e) => console.error("[resonix] ap error", e));
+    }
+  }
+
+  private ensurePlayerStarted() {
+    const resource = this.resource;
+    if (!resource) return;
+
+    const status = this.audioPlayer.state.status;
+    if (
+      status === AudioPlayerStatus.Idle ||
+      status === AudioPlayerStatus.AutoPaused
+    ) {
+      this.audioPlayer.play(resource);
+      if (this.opts.debug)
+        console.log("[resonix] resumed audio player after idle");
+      return;
+    }
+
+    if (status === AudioPlayerStatus.Paused) {
+      this.audioPlayer.unpause();
+    }
   }
 
   /**
@@ -144,6 +301,9 @@ export class ResonixPlayer extends EventEmitter<PlayerEventMap> {
 
     const trackToPlay: ResonixTrack = { uri, metadata };
     this.currentTrack = trackToPlay;
+    this.finishedEmittedForCurrentTrack = false;
+    this.clearIdleFinishTimer();
+    this.lastPacketAt = 0;
 
     await this.rest.createPlayer({ id: this.id, uri });
     await this.rest.play(this.id);
@@ -151,60 +311,45 @@ export class ResonixPlayer extends EventEmitter<PlayerEventMap> {
     const version = this.opts.version ? `/${this.opts.version}` : "";
     const base = this.opts.baseUrl.replace(/\/$/, "");
     const wsUrl = `${base.replace("http://", "ws://").replace("https://", "wss://")}${version}/players/${this.id}/ws`;
-    this.ws = new WebSocket(wsUrl);
+    this.ws = new WebSocket(wsUrl, {
+      perMessageDeflate: false,
+    });
     this.initResource();
 
     try {
       await entersState(this.connection, VoiceConnectionStatus.Ready, 10_000);
     } catch {}
     if (this.resource) this.audioPlayer.play(this.resource);
-    if (this.opts.debug) {
-      this.audioPlayer.on("debug", (m) => console.log("[resonix] ap debug", m));
-      this.audioPlayer.on("error", (e) =>
-        console.error("[resonix] ap error", e),
-      );
-    }
 
     let pkt = 0;
+    let droppedInvalidFrames = 0;
     this.ws.on("message", (data: WebSocket.RawData) => {
+      this.clearIdleFinishTimer();
+      this.lastPacketAt = Date.now();
+
       const buf = Buffer.isBuffer(data)
         ? data
         : Buffer.from(data as unknown as Buffer);
+
       this.initResource();
       const stream = this.stream;
-      let resource = this.resource;
-      if (!stream || !resource) return;
+      if (!stream) return;
 
-      const status = this.audioPlayer.state.status;
-      if (
-        status === AudioPlayerStatus.Idle ||
-        status === AudioPlayerStatus.AutoPaused
-      ) {
-        try {
-          this.audioPlayer.play(resource);
-          if (this.opts.debug)
-            console.log("[resonix] resumed audio player after idle");
-        } catch (err) {
-          if (err instanceof Error && err.message.includes("already ended")) {
-            this.clearResource();
-            this.initResource();
-            resource = this.resource;
-            if (resource) {
-              this.audioPlayer.play(resource);
-            }
-          } else {
-            throw err;
-          }
+      if (!stream.pushPacket(buf as Buffer)) {
+        droppedInvalidFrames += 1;
+        if (this.opts.debug && droppedInvalidFrames % 25 === 0) {
+          console.warn(
+            `[resonix] dropped invalid frames: ${droppedInvalidFrames}`,
+          );
         }
-      } else if (status === AudioPlayerStatus.Paused) {
-        this.audioPlayer.unpause();
+        return;
       }
-      if (pkt < 5 || this.opts.debug) {
-        // Expect 20ms 48kHz stereo s16le => 48000 * 2 (stereo) * 2 (bytes) * 0.02 = 3840 bytes
-        const expected = 3840;
+
+      this.ensurePlayerStarted();
+
+      if (pkt < 5 || (this.opts.debug && pkt % 100 === 0)) {
         let energy = 0;
         if (buf.length >= 4) {
-          // compute average absolute sample value over first 50 samples for quick sanity
           const sampleCount = Math.min(50, buf.length / 2);
           for (let i = 0; i < sampleCount; i++) {
             const sample = buf.readInt16LE(i * 2);
@@ -214,8 +359,8 @@ export class ResonixPlayer extends EventEmitter<PlayerEventMap> {
         }
         console.log(
           `[resonix] frame ${pkt + 1} ${buf.length} bytes` +
-            (buf.length !== expected ? ` (WARN size!=${expected})` : "") +
-            (energy ? ` energy~${energy}` : " energy=0"),
+            (energy ? ` energy~${energy}` : " energy=0") +
+            ` q=${stream.queuedFrames()}`,
         );
         if (energy === 0 && pkt < 5) {
           console.warn(
@@ -224,7 +369,6 @@ export class ResonixPlayer extends EventEmitter<PlayerEventMap> {
         }
       }
       pkt++;
-      stream.pushPacket(buf as Buffer);
     });
 
     // Emit trackStart event when we start receiving audio
@@ -240,12 +384,14 @@ export class ResonixPlayer extends EventEmitter<PlayerEventMap> {
     });
 
     this.ws.on("close", () => {
+      this.clearIdleFinishTimer();
       this.clearResource();
       this.ws = undefined;
     });
     
     this.ws.on("error", (e) => {
       console.error("[resonix] ws error", e);
+      this.clearIdleFinishTimer();
       if (this.currentTrack) {
         this.emit("playerError", {
           player: this.id,
@@ -254,10 +400,6 @@ export class ResonixPlayer extends EventEmitter<PlayerEventMap> {
       }
       this.clearResource();
       this.ws = undefined;
-    });
-
-    this.audioPlayer.on(AudioPlayerStatus.Playing, () => {
-      console.log(`[resonix] playing ${uri}`);
     });
   }
 
@@ -308,20 +450,23 @@ export class ResonixPlayer extends EventEmitter<PlayerEventMap> {
    */
   destroy() {
     this.isDestroyed = true;
+    this.clearIdleFinishTimer();
     this.ws?.close();
     this.clearResource();
     this.audioPlayer.stop();
     this.ws = undefined;
     void this.rest.deletePlayer(this.id);
-    
-    if (this.currentTrack) {
+
+    if (this.currentTrack && !this.finishedEmittedForCurrentTrack) {
+      this.finishedEmittedForCurrentTrack = true;
       this.emit("trackEnd", {
         player: this.id,
         track: this.currentTrack,
         reason: "cleanup",
       }).catch((e) => console.error("[resonix] error emitting trackEnd on destroy", e));
     }
-    
+
+    this.currentTrack = undefined;
     this.removeAllListeners();
   }
 }
