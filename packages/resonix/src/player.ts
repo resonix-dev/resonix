@@ -24,6 +24,9 @@ import { EventEmitter } from "./events.js";
 const PCM_FRAME_BYTES = 3840;
 const FRAME_DURATION_MS = 20;
 const IDLE_END_GRACE_MS = 1500;
+const PREBUFFER_FRAMES = 12;
+const MAX_BUFFERED_FRAMES = 120;
+const SILENCE_FRAME = Buffer.alloc(PCM_FRAME_BYTES);
 
 /**
  * Simple readable stream that accepts raw PCM frame buffers pushed from the
@@ -34,6 +37,8 @@ class PcmFrameStream extends Readable {
   private drainTimer?: NodeJS.Timeout;
   private ended = false;
   private started = false;
+  private nextDrainAt = 0;
+  private backpressure = false;
   private droppedFrames = 0;
   private underflowCount = 0;
 
@@ -60,9 +65,8 @@ class PcmFrameStream extends Readable {
 
     this.queue.push(buf);
 
-    const maxBufferedFrames = 120;
-    if (this.queue.length > maxBufferedFrames) {
-      const overflow = this.queue.length - maxBufferedFrames;
+    if (this.queue.length > MAX_BUFFERED_FRAMES) {
+      const overflow = this.queue.length - MAX_BUFFERED_FRAMES;
       this.queue.splice(0, overflow);
       this.droppedFrames += overflow;
       if (this.debug && this.droppedFrames % 50 === 0) {
@@ -72,8 +76,7 @@ class PcmFrameStream extends Readable {
       }
     }
 
-    const prebufferFrames = 5;
-    if (!this.started && this.queue.length >= prebufferFrames) {
+    if (!this.started && this.queue.length >= PREBUFFER_FRAMES) {
       this.started = true;
     }
 
@@ -88,27 +91,59 @@ class PcmFrameStream extends Readable {
     return this.queue.length;
   }
 
-  private startDrainLoop() {
-    this.drainTimer = setInterval(() => {
-      if (this.ended || !this.started) {
-        return;
-      }
+  isReadyToStart() {
+    return this.started;
+  }
 
-      const frame = this.queue.shift();
-      if (!frame) {
-        this.started = false;
-        this.underflowCount += 1;
-        if (this.debug && this.underflowCount % 25 === 0) {
-          console.warn(
-            `[resonix] jitter buffer underflow count: ${this.underflowCount}`,
-          );
-        }
-        return;
-      }
+  override _read() {
+    this.backpressure = false;
+  }
 
-      this.push(frame);
-    }, FRAME_DURATION_MS);
+  private scheduleDrain(nextDelayMs: number) {
+    this.drainTimer = setTimeout(() => {
+      this.drainOnce();
+    }, nextDelayMs);
     this.drainTimer.unref?.();
+  }
+
+  private drainOnce() {
+    if (this.ended) {
+      return;
+    }
+
+    if (!this.started || this.backpressure) {
+      this.nextDrainAt = Date.now() + FRAME_DURATION_MS;
+      this.scheduleDrain(FRAME_DURATION_MS);
+      return;
+    }
+
+    const frame = this.queue.shift();
+    if (!frame) {
+      this.underflowCount += 1;
+      if (this.debug && this.underflowCount % 25 === 0) {
+        console.warn(
+          `[resonix] jitter buffer underflow count: ${this.underflowCount}`,
+        );
+      }
+      // Feed one silence frame to keep Discord player cadence stable during
+      // transient packet jitter, then force re-prebuffer for real audio.
+      this.backpressure = !this.push(SILENCE_FRAME);
+      this.started = false;
+      this.nextDrainAt += FRAME_DURATION_MS;
+      const delay = Math.max(0, this.nextDrainAt - Date.now());
+      this.scheduleDrain(delay);
+      return;
+    }
+
+    this.backpressure = !this.push(frame);
+    this.nextDrainAt += FRAME_DURATION_MS;
+    const delay = Math.max(0, this.nextDrainAt - Date.now());
+    this.scheduleDrain(delay);
+  }
+
+  private startDrainLoop() {
+    this.nextDrainAt = Date.now() + FRAME_DURATION_MS;
+    this.scheduleDrain(FRAME_DURATION_MS);
   }
 
   /** Signal that no more frames will arrive. */
@@ -116,7 +151,7 @@ class PcmFrameStream extends Readable {
     if (this.ended) return;
     this.ended = true;
     if (this.drainTimer) {
-      clearInterval(this.drainTimer);
+      clearTimeout(this.drainTimer);
       this.drainTimer = undefined;
     }
     this.queue.length = 0;
@@ -250,7 +285,8 @@ export class ResonixPlayer extends EventEmitter<PlayerEventMap> {
 
   private ensurePlayerStarted() {
     const resource = this.resource;
-    if (!resource) return;
+    const stream = this.stream;
+    if (!resource || !stream || !stream.isReadyToStart()) return;
 
     const status = this.audioPlayer.state.status;
     if (
@@ -319,7 +355,8 @@ export class ResonixPlayer extends EventEmitter<PlayerEventMap> {
     try {
       await entersState(this.connection, VoiceConnectionStatus.Ready, 10_000);
     } catch {}
-    if (this.resource) this.audioPlayer.play(this.resource);
+    // Delay initial playback until jitter buffer has preloaded enough frames.
+    this.ensurePlayerStarted();
 
     let pkt = 0;
     let droppedInvalidFrames = 0;
@@ -347,7 +384,7 @@ export class ResonixPlayer extends EventEmitter<PlayerEventMap> {
 
       this.ensurePlayerStarted();
 
-      if (pkt < 5 || (this.opts.debug && pkt % 100 === 0)) {
+      if (this.opts.debug && (pkt < 5 || pkt % 100 === 0)) {
         let energy = 0;
         if (buf.length >= 4) {
           const sampleCount = Math.min(50, buf.length / 2);
