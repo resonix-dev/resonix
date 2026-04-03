@@ -1,6 +1,6 @@
 {
   "name": "resonix.js",
-  "version": "0.3.0",
+  "version": "0.3.5",
   "description": "Official JavaScript client for the Resonix audio node",
   "type": "module",
   "main": "dist/index.js",
@@ -26,7 +26,7 @@
   },
   "dependencies": {
     "@discordjs/opus": "^0.10.0",
-    "@discordjs/voice": "^0.18.0",
+    "@discordjs/voice": "^0.19.2",
     "discord.js": "^14.15.0",
     "node-fetch": "^3.3.2",
     "node-opus": "^0.3.3",
@@ -37,7 +37,7 @@
   "devDependencies": {
     "@types/node": "^24.2.1",
     "@types/ws": "^8.18.1",
-    "prettier": "^3.6.2",
-    "typescript": "^5.9.2"
+    "prettier": "^3.8.1",
+    "typescript": "^6.0.2"
   }
 }

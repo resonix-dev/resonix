@@ -31,9 +31,9 @@
     "release": "echo 'Use changesets or manual versioning (not yet configured)'"
   },
   "devDependencies": {
-    "prettier": "^3.6.2",
-    "rimraf": "^6.0.1",
-    "typescript": "^5.9.2"
+    "prettier": "^3.8.1",
+    "rimraf": "^6.1.3",
+    "typescript": "^6.0.2"
   },
   "engines": {
     "node": ">=18.0.0"
@@ -41,6 +41,6 @@
   "dependencies": {
     "extract-zip": "^2.0.1",
     "node-fetch": "^3.3.2",
-    "tar": "^7.4.3"
+    "tar": "^7.5.13"
   }
 }

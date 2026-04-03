@@ -44,6 +44,7 @@ export class ResonixManager extends EventEmitter<PlayerEventMap> {
       guildId: opts.guildId,
       adapterCreator: opts.adapterCreator,
       selfDeaf: opts.selfDeaf ?? true,
+      daveEncryption: true,
     });
     try {
       await entersState(connection, VoiceConnectionStatus.Ready, 15_000);
